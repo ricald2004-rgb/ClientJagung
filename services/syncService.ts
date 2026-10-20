@@ -9,8 +9,8 @@ import {
   getPendingSyncItems,
   markHistoryAsSynced
 } from './historyService';
-import { UserRegion } from './regionService';
 import { FarmerProfile, getFarmerProfile } from './profileService';
+import { UserRegion } from './regionService';
 
 /**
  * =========================================================================
@@ -91,7 +91,7 @@ export const getBackendUrl = (): string => {
   }
 
   // 2. Fallback IP laptop Wi-Fi aktif saat ini
-  return 'http://192.168.101.13:5000';
+  return 'http://192.168.18.143:5000';
 };
 
 /**

@@ -66,3 +66,25 @@ export async function saveFarmerProfile(profile: FarmerProfile): Promise<void> {
   }
 }
 
+/**
+ * Memeriksa apakah petani sudah pernah mengisi profil awal (Onboarding)
+ */
+export async function hasConfiguredFarmerProfile(): Promise<boolean> {
+  try {
+    const json = await AsyncStorage.getItem(PROFILE_STORAGE_KEY);
+    if (!json) return false;
+    const profile = JSON.parse(json) as FarmerProfile;
+    return Boolean(
+      profile &&
+      profile.nama &&
+      profile.nama.trim().length > 0 &&
+      profile.nama.trim() !== 'Petani Jagung' &&
+      profile.provinsi &&
+      profile.kabupaten
+    );
+  } catch {
+    return false;
+  }
+}
+
+
