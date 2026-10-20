@@ -47,9 +47,6 @@ export default function OnboardingProfileScreen({ onComplete }: OnboardingProps)
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [saving, setSaving] = useState<boolean>(false);
 
-  // Quick Chips untuk Kelompok Tani
-  const QUICK_POKTAN = ['Petani Mandiri', 'Karya Bersama', 'Maju Makmur', 'Tani Sejahtera'];
-
   // Filter daftar untuk picker provinsi / kabupaten
   const availableKabupaten = provinsi && INDONESIA_REGIONS[provinsi] ? INDONESIA_REGIONS[provinsi] : [];
   const currentList = activePicker === 'provinsi' ? PROVINCES_LIST : availableKabupaten;
@@ -147,13 +144,11 @@ export default function OnboardingProfileScreen({ onComplete }: OnboardingProps)
             </View>
 
             <View style={styles.headerMain}>
-              <View style={styles.logoWrap}>
-                <Image
-                  source={require('../assets/images/icon.png')}
-                  style={styles.logoImg}
-                  resizeMode="contain"
-                />
-              </View>
+              <Image
+                source={require('../assets/images/icon.png')}
+                style={styles.logoImg}
+                resizeMode="contain"
+              />
               <View style={{ flex: 1 }}>
                 <Text style={styles.welcomeTitle}>MILU SESEHATI</Text>
                 <Text style={styles.welcomeSubtitle}>Lengkapi Profil Petani Anda</Text>
@@ -228,29 +223,11 @@ export default function OnboardingProfileScreen({ onComplete }: OnboardingProps)
                   placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
                 />
               </View>
-
-              {/* Quick Choice Chips */}
-              <View style={styles.chipsRow}>
-                {QUICK_POKTAN.map((pok) => {
-                  const isSelected = kelompokTani === pok;
-                  return (
-                    <TouchableOpacity
-                      key={pok}
-                      style={[styles.chip, isSelected && styles.chipActive]}
-                      onPress={() => setKelompokTani(pok)}
-                    >
-                      <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
-                        {pok}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
             </View>
           </View>
 
           {/* ========================================== */}
-          {/* SECTION 2: LOKASI KE閒/LAHAN JAGUNG       */}
+          {/* SECTION 2: LOKASI KEBUN / LAHAN JAGUNG    */}
           {/* ========================================== */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
@@ -259,7 +236,6 @@ export default function OnboardingProfileScreen({ onComplete }: OnboardingProps)
               </View>
               <View>
                 <Text style={styles.sectionTitle}>Lokasi Kebun / Lahan Jagung</Text>
-                <Text style={styles.sectionSub}>Menentukan pemetaan sebaran penyakit tanaman</Text>
               </View>
             </View>
 
@@ -315,8 +291,6 @@ export default function OnboardingProfileScreen({ onComplete }: OnboardingProps)
                   style={styles.textInput}
                   value={kecamatan}
                   onChangeText={setKecamatan}
-                  placeholder="Contoh: Kabila, Limboto, dll."
-                  placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
                 />
               </View>
             </View>
@@ -351,8 +325,6 @@ export default function OnboardingProfileScreen({ onComplete }: OnboardingProps)
                   style={styles.textInput}
                   value={desa}
                   onChangeText={setDesa}
-                  placeholder={`Nama ${tipeDesa} (contoh: Dutohe, Toto Utara)`}
-                  placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
                 />
               </View>
             </View>
@@ -542,22 +514,9 @@ const getStyles = (isDark: boolean) =>
       marginBottom: 8,
       gap: 12,
     },
-    logoWrap: {
+    logoImg: {
       width: 48,
       height: 48,
-      borderRadius: 14,
-      backgroundColor: '#064E3B',
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.15,
-      shadowRadius: 4,
-      elevation: 3,
-    },
-    logoImg: {
-      width: 32,
-      height: 32,
     },
     welcomeTitle: {
       fontSize: 13,
@@ -652,33 +611,6 @@ const getStyles = (isDark: boolean) =>
       color: isDark ? '#6B7280' : '#9CA3AF',
       marginTop: 4,
       marginLeft: 4,
-    },
-    chipsRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-      marginTop: 8,
-    },
-    chip: {
-      backgroundColor: isDark ? '#1B272C' : '#F3F4F6',
-      borderWidth: 1,
-      borderColor: isDark ? '#2D3E46' : '#E5E7EB',
-      borderRadius: 16,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-    },
-    chipActive: {
-      backgroundColor: isDark ? '#064E3B' : '#D1FAE5',
-      borderColor: '#059669',
-    },
-    chipText: {
-      fontSize: 11,
-      fontWeight: '500',
-      color: isDark ? '#9CA3AF' : '#4B5563',
-    },
-    chipTextActive: {
-      color: isDark ? '#A7F3D0' : '#065F46',
-      fontWeight: '700',
     },
     dropdownBtn: {
       flexDirection: 'row',
@@ -871,3 +803,4 @@ const getStyles = (isDark: boolean) =>
       color: isDark ? '#9CA3AF' : '#6B7280',
     },
   });
+
