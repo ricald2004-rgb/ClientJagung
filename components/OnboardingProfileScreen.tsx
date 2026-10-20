@@ -36,7 +36,7 @@ export default function OnboardingProfileScreen({ onComplete }: OnboardingProps)
   const [nama, setNama] = useState<string>('');
   const [noHp, setNoHp] = useState<string>('');
   const [kelompokTani, setKelompokTani] = useState<string>('');
-  const [provinsi, setProvinsi] = useState<string>('Gorontalo'); // Default disorot ke Gorontalo untuk kemudahan
+  const [provinsi, setProvinsi] = useState<string>('');
   const [kabupaten, setKabupaten] = useState<string>('');
   const [kecamatan, setKecamatan] = useState<string>('');
   const [desa, setDesa] = useState<string>('');
@@ -145,7 +145,7 @@ export default function OnboardingProfileScreen({ onComplete }: OnboardingProps)
 
             <View style={styles.headerMain}>
               <Image
-                source={require('../assets/images/icon.png')}
+                source={require('../assets/images/logo-home.png')}
                 style={styles.logoImg}
                 resizeMode="contain"
               />
@@ -185,8 +185,6 @@ export default function OnboardingProfileScreen({ onComplete }: OnboardingProps)
                   style={styles.textInput}
                   value={nama}
                   onChangeText={setNama}
-                  placeholder="Contoh: Pak Budi Santoso"
-                  placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
                   autoCapitalize="words"
                 />
               </View>
@@ -203,8 +201,6 @@ export default function OnboardingProfileScreen({ onComplete }: OnboardingProps)
                   value={noHp}
                   onChangeText={setNoHp}
                   keyboardType="phone-pad"
-                  placeholder="Contoh: 081234567890"
-                  placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
                 />
               </View>
               <Text style={styles.fieldHint}>Bermanfaat jika petugas penyuluh atau dinas ingin menghubungi Anda.</Text>
@@ -219,8 +215,6 @@ export default function OnboardingProfileScreen({ onComplete }: OnboardingProps)
                   style={styles.textInput}
                   value={kelompokTani}
                   onChangeText={setKelompokTani}
-                  placeholder="Contoh: Karya Bersama (atau ketik Mandiri)"
-                  placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
                 />
               </View>
             </View>
@@ -515,8 +509,8 @@ const getStyles = (isDark: boolean) =>
       gap: 12,
     },
     logoImg: {
-      width: 48,
-      height: 48,
+      width: 58,
+      height: 58,
     },
     welcomeTitle: {
       fontSize: 13,
