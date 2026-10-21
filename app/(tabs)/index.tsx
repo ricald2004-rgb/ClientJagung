@@ -27,6 +27,31 @@ import {
   syncPendingDiagnoses,
 } from '../../services/syncService';
 
+let cachedModel: any = null;
+let modelLoadingPromise: Promise<any> | null = null;
+
+async function getOrLoadModel(): Promise<any> {
+  if (cachedModel) return cachedModel;
+  if (modelLoadingPromise) return modelLoadingPromise;
+
+  modelLoadingPromise = (async () => {
+    try {
+      await tf.setBackend('cpu');
+      await tf.ready();
+      const modelJson = require('../../assets/model/model.json');
+      const loadedModel = await tf.loadGraphModel(bundleResourceIO(modelJson));
+      cachedModel = loadedModel;
+      return loadedModel;
+    } catch (err) {
+      console.warn("Pemuatan model offline gagal:", err);
+      modelLoadingPromise = null;
+      throw err;
+    }
+  })();
+
+  return modelLoadingPromise;
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   const { isDark, toggleTheme } = useTheme();
@@ -60,23 +85,13 @@ export default function HomeScreen() {
   );
 
   useEffect(() => {
-    async function prepare() {
-      try {
-        await tf.setBackend('cpu');
-        await tf.ready();
-        
-        const modelJson = require('../../assets/model/model.json');
-        const loadedModel = await tf.loadGraphModel(bundleResourceIO(modelJson));
-        setModel(loadedModel);
-        console.log("Model AI lokal siap digunakan!");
-      } catch (e: any) {
-        console.warn("Model lokal belum aktif, fallback server disiapkan:", e);
-      }
-    }
-    const timer = setTimeout(() => {
-      prepare();
-    }, 400);
-    return () => clearTimeout(timer);
+    getOrLoadModel()
+      .then((m) => {
+        if (m) setModel(m);
+      })
+      .catch((e) => {
+        console.warn("Inisialisasi model offline di latar belakang:", e);
+      });
   }, []);
 
 
@@ -127,17 +142,14 @@ export default function HomeScreen() {
     setLoading(true);
     await new Promise(resolve => setTimeout(resolve, 150));
 
-    // 1. JALUR UTAMA: JIKA MODEL LOKAL SUDAH TERSEDIA DI HP
-    let activeModel = model;
+    // 1. JALUR UTAMA: MODEL OFFLINE LANGSUNG DI PERANGKAT
+    let activeModel = model || cachedModel;
     if (!activeModel) {
       try {
-        await tf.setBackend('cpu');
-        await tf.ready();
-        const modelJson = require('../../assets/model/model.json');
-        activeModel = await tf.loadGraphModel(bundleResourceIO(modelJson));
-        setModel(activeModel);
+        activeModel = await getOrLoadModel();
+        if (activeModel) setModel(activeModel);
       } catch (loadErr) {
-        console.warn("Pemuatan model on-demand gagal:", loadErr);
+        console.warn("Pemuatan model on-demand:", loadErr);
       }
     }
 
@@ -169,10 +181,20 @@ export default function HomeScreen() {
           return tf.tensor3d(buffer, [targetSize, targetSize, 3]).expandDims();
         });
 
-        const predictions = await activeModel.predict(inputTensor);
-        const predData = await predictions.data();
-        inputTensor.dispose();
-        predictions.dispose();
+        let predictions: any = null;
+        let predData: Float32Array | Int32Array | Uint8Array;
+        try {
+          predictions = activeModel.predict(inputTensor);
+          const predTensor = Array.isArray(predictions) ? predictions[0] : predictions;
+          predData = await predTensor.data();
+        } finally {
+          try { inputTensor.dispose(); } catch {}
+          if (Array.isArray(predictions)) {
+            predictions.forEach((p: any) => { try { p?.dispose?.(); } catch {} });
+          } else if (predictions && typeof predictions.dispose === 'function') {
+            try { predictions.dispose(); } catch {}
+          }
+        }
 
         const CLASSES = ["Bercak Daun", "Bukan Objek Jagung", "Hawar Daun", "Jagung Sehat", "Karat Daun"];
         const dataArray = Array.from(predData) as number[];
@@ -321,7 +343,7 @@ export default function HomeScreen() {
       console.warn("Deteksi server gagal:", serverErr);
       Alert.alert(
         "Gagal Memproses Diagnosa",
-        "Modul deteksi lokal sedang dalam proses inisialisasi dan koneksi ke server laptop terputus. Pastikan HP terhubung ke Wi-Fi server atau coba beberapa saat lagi."
+        "Silakan coba beberapa saat lagi atau pastikan foto daun jagung terlihat jelas dan memiliki pencahayaan yang cukup."
       );
     } finally {
       setLoading(false);

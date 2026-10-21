@@ -67,6 +67,11 @@ export const getBackendUrl = (): string => {
     return cloudUrl;
   }
 
+  // Jika admin/pengguna mengatur custom server URL di HP
+  if (inMemoryServerUrl && inMemoryServerUrl.trim().length > 0) {
+    return inMemoryServerUrl.trim();
+  }
+
   if (Platform.OS === 'web') {
     return 'http://localhost:5000';
   }
