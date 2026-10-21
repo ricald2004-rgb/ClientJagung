@@ -7,14 +7,12 @@
     "icon": "./assets/images/icon.png",
     "scheme": "milusesehati",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "package": "com.milusesehati.app",
       "versionCode": 1,
-      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#064E3B",
         "foregroundImage": "./assets/images/icon.png"
