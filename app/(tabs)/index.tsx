@@ -218,6 +218,8 @@ export default function HomeScreen() {
           const regionLabel = formatRegionLabel(currentRegion);
           const histId = `hist_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
           let isSynced = false;
+
+          // HANYA sinkronkan ke server dan simpan ke memori HP jika objek adalah tanaman/penyakit jagung valid!
           if (topPenyakit !== "Bukan Objek Jagung") {
             isSynced = await syncDiagnosisToServer({
               id: histId,
@@ -226,6 +228,20 @@ export default function HomeScreen() {
               top3: mapped.slice(0, 3),
               region: currentRegion,
               imageUri: image,
+            });
+
+            await saveHistory({
+              id: histId,
+              imageUri: image,
+              penyakit: topPenyakit,
+              confidence: mapped[0].confidence,
+              top3: mapped.slice(0, 3),
+              wilayah: regionLabel,
+              provinsi: currentRegion?.provinsi,
+              kabupaten: currentRegion?.kabupaten,
+              kecamatan: currentRegion?.kecamatan,
+              desa: currentRegion?.desa,
+              isSynced: isSynced,
             });
           }
 
@@ -237,20 +253,6 @@ export default function HomeScreen() {
             isSynced: isSynced,
           };
           setResult(resData);
-
-          await saveHistory({
-            id: histId,
-            imageUri: image,
-            penyakit: topPenyakit,
-            confidence: mapped[0].confidence,
-            top3: mapped.slice(0, 3),
-            wilayah: regionLabel,
-            provinsi: currentRegion?.provinsi,
-            kabupaten: currentRegion?.kabupaten,
-            kecamatan: currentRegion?.kecamatan,
-            desa: currentRegion?.desa,
-            isSynced: isSynced,
-          });
         } catch (saveErr) {
           console.warn("Gagal menyimpan riwayat:", saveErr);
           setResult({
@@ -300,6 +302,8 @@ export default function HomeScreen() {
           const regionLabel = formatRegionLabel(currentRegion);
           const histId = `hist_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
           let isSynced = false;
+
+          // HANYA sinkronkan ke server dan simpan ke memori HP jika objek adalah tanaman/penyakit jagung valid!
           if (sData.penyakit !== "Bukan Objek Jagung") {
             isSynced = await syncDiagnosisToServer({
               id: histId,
@@ -309,25 +313,25 @@ export default function HomeScreen() {
               region: currentRegion,
               imageUri: image,
             });
+
+            await saveHistory({
+              id: histId,
+              imageUri: image,
+              penyakit: sData.penyakit,
+              confidence: sData.confidence,
+              top3: sData.top3,
+              wilayah: regionLabel,
+              provinsi: currentRegion?.provinsi,
+              kabupaten: currentRegion?.kabupaten,
+              kecamatan: currentRegion?.kecamatan,
+              desa: currentRegion?.desa,
+              isSynced: isSynced,
+            });
           }
 
           setResult({
             ...sData,
             id: histId,
-            isSynced: isSynced,
-          });
-
-          await saveHistory({
-            id: histId,
-            imageUri: image,
-            penyakit: sData.penyakit,
-            confidence: sData.confidence,
-            top3: sData.top3,
-            wilayah: regionLabel,
-            provinsi: currentRegion?.provinsi,
-            kabupaten: currentRegion?.kabupaten,
-            kecamatan: currentRegion?.kecamatan,
-            desa: currentRegion?.desa,
             isSynced: isSynced,
           });
         } catch (saveErr) {

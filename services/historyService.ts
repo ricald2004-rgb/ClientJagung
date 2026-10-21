@@ -63,6 +63,7 @@ export async function setRetentionDays(days: number): Promise<void> {
 
 /**
  * Ambil seluruh riwayat dengan pembersihan otomatis jika lewat batas waktu
+ * serta pembersihan otomatis untuk hasil 'Bukan Objek Jagung'
  */
 export async function getHistory(): Promise<HistoryItem[]> {
   try {
@@ -72,12 +73,14 @@ export async function getHistory(): Promise<HistoryItem[]> {
     let items: HistoryItem[] = JSON.parse(json);
     const retentionDays = await getRetentionDays();
 
-    // Selalu hapus otomatis data diagnosa yang sudah melebihi batas waktu simpan
+    // Hapus otomatis data yang kadaluarsa DAN jangan pernah sertakan 'Bukan Objek Jagung'
     const maxAgeMs = retentionDays * 24 * 60 * 60 * 1000;
     const now = Date.now();
-    const validItems = items.filter((item) => now - item.timestamp <= maxAgeMs);
+    const validItems = items.filter(
+      (item) => now - item.timestamp <= maxAgeMs && item.penyakit !== 'Bukan Objek Jagung'
+    );
 
-    // Jika ada item yang kadaluarsa dan terhapus otomatis, simpan data terbaru
+    // Jika ada item kadaluarsa atau bukan objek jagung, simpan data bersih terbaru ke storage
     if (validItems.length !== items.length) {
       await AsyncStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(validItems));
       items = validItems;
@@ -93,11 +96,17 @@ export async function getHistory(): Promise<HistoryItem[]> {
 
 /**
  * Simpan hasil diagnosa baru ke riwayat
+ * 'Bukan Objek Jagung' sama sekali TIDAK disimpan ke memory HP!
  */
 export async function saveHistory(
   data: Omit<HistoryItem, 'id' | 'timestamp' | 'dateFormatted'> & { id?: string }
-): Promise<HistoryItem> {
+): Promise<HistoryItem | null> {
   try {
+    // KECUALIKAN SECARA TOTAL: 'Bukan Objek Jagung' tidak boleh disimpan ke memori HP
+    if (data.penyakit === 'Bukan Objek Jagung') {
+      return null;
+    }
+
     const current = await getHistory();
     const timestamp = Date.now();
     const newItem: HistoryItem = {

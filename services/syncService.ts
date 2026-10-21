@@ -5,6 +5,7 @@ import Constants from 'expo-constants';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { Platform } from 'react-native';
 import {
+  deleteHistoryItem,
   getHistory,
   getPendingSyncItems,
   markHistoryAsSynced
@@ -332,9 +333,9 @@ export async function syncPendingDiagnoses(): Promise<number> {
     let syncedCount = 0;
 
     for (const item of pendingItems) {
-      // Kecualikan Bukan Objek Jagung: tandai synced agar tidak terus menumpuk di antrean
+      // Kecualikan Bukan Objek Jagung: langsung hapus agar tidak tersimpan di memori HP
       if (item.penyakit === 'Bukan Objek Jagung') {
-        await markHistoryAsSynced(item.id);
+        await deleteHistoryItem(item.id);
         continue;
       }
 
@@ -397,7 +398,7 @@ export async function syncAllHistoryToServer(): Promise<number> {
     let syncedCount = 0;
     for (const item of allItems) {
       if (item.penyakit === 'Bukan Objek Jagung') {
-        await markHistoryAsSynced(item.id);
+        await deleteHistoryItem(item.id);
         continue;
       }
 
