@@ -120,9 +120,9 @@ export default function ExploreScreen() {
       case 'Bercak Daun':
         return require('../../assets/images/Bercak Daun.jpg');
       case 'Hawar Daun':
-        return require('../../assets/images/Hawar daun.png');
+        return require('../../assets/images/Hawar daun.jpg');
       case 'Karat Daun':
-        return require('../../assets/images/Karat Daun.png');
+        return require('../../assets/images/Karat Daun.jpg');
       case 'Jagung Sehat':
         return require('../../assets/images/Jagung Sehat.jpeg');
       default:
