@@ -23,7 +23,7 @@ import { UserRegion } from './regionService';
  *
  * Jika dikosongkan (''), sistem otomatis menggunakan IP laptop developer (Wi-Fi).
  */
-export let CLOUD_SERVER_URL: string = '';
+export let CLOUD_SERVER_URL: string = 'https://concerned-nextel-proper-weblog.trycloudflare.com';
 
 const SERVER_URL_STORAGE_KEY = '@milu_sesehati_custom_server_url';
 let inMemoryServerUrl: string | null = null;
@@ -54,29 +54,48 @@ export async function resetCustomServerUrl(): Promise<void> {
 }
 
 /**
+ * Uji koneksi ke server monitoring (HTTP/HTTPS)
+ */
+export async function testServerConnection(url?: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const targetUrl = url && url.trim().length > 0 ? url.trim().replace(/\/+$/, '') : getBackendUrl();
+    const response = await axios.get(`${targetUrl}/api/penyakit-info`, {
+      timeout: 4500,
+    });
+    if (response.status === 200 && response.data && response.data.success) {
+      return { success: true, message: 'Terhubung dengan lancar ke server dashboard monitoring!' };
+    }
+    return { success: false, message: 'Server merespons, namun format data tidak sesuai.' };
+  } catch (err: any) {
+    return { success: false, message: err.message || 'Tidak dapat terhubung ke server.' };
+  }
+}
+
+/**
  * Otomatis deteksi IP backend:
- * 1. Jika CLOUD_SERVER_URL diisi, prioritaskan itu
- * 2. Web: localhost:5000
- * 3. HP Fisik / Expo Go: Ambil IP host laptop yang terhubung ke Expo Metro bundler
- * 4. Custom Server dari Penyimpanan (jika disetel manual dan bukan IP basi)
- * 5. Fallback: IP Wi-Fi laptop aktif saat ini (http://192.168.1.11:5000)
+ * 1. Custom Server dari Penyimpanan (jika disetel manual oleh admin/pengguna)
+ * 2. Jika CLOUD_SERVER_URL diisi, gunakan URL Cloud HTTPS
+ * 3. Web: localhost:5000
+ * 4. HP Fisik / Expo Go: Ambil IP host laptop yang terhubung ke Expo Metro bundler
+ * 5. Fallback: IP Wi-Fi laptop aktif saat ini (http://192.168.101.253:5000)
  */
 export const getBackendUrl = (): string => {
+  // 1. Jika admin/pengguna mengatur custom server URL di HP
+  if (inMemoryServerUrl && inMemoryServerUrl.trim().length > 0) {
+    return inMemoryServerUrl.trim();
+  }
+
+  // 2. Cloud URL HTTPS
   const cloudUrl = String(CLOUD_SERVER_URL || '').trim();
   if (cloudUrl.length > 0) {
     return cloudUrl;
-  }
-
-  // Jika admin/pengguna mengatur custom server URL di HP
-  if (inMemoryServerUrl && inMemoryServerUrl.trim().length > 0) {
-    return inMemoryServerUrl.trim();
   }
 
   if (Platform.OS === 'web') {
     return 'http://localhost:5000';
   }
 
-  // 1. Deteksi IP host developer dari berbagai properti Expo SDK (termasuk Expo Go)
+  // 3. Deteksi IP host developer dari berbagai properti Expo SDK (termasuk Expo Go)
   const hostCandidates = [
     Constants.expoConfig?.hostUri,
     (Constants as any).expoGoConfig?.debuggerHost,
@@ -95,8 +114,8 @@ export const getBackendUrl = (): string => {
     }
   }
 
-  // 2. Fallback IP laptop Wi-Fi aktif saat ini
-  return 'http://192.168.18.143:5000';
+  // 4. Fallback IP laptop Wi-Fi aktif saat ini
+  return 'http://192.168.101.253:5000';
 };
 
 /**

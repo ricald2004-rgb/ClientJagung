@@ -1,6 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   KeyboardAvoidingView,
@@ -18,7 +19,14 @@ import { INDONESIA_REGIONS, PROVINCES_LIST } from '../../constants/indonesiaRegi
 import { useTheme } from '../../context/ThemeContext';
 import { FarmerProfile, getFarmerProfile, saveFarmerProfile } from '../../services/profileService';
 import { formatRegionLabel } from '../../services/regionService';
-import { syncFarmerProfileToServer } from '../../services/syncService';
+import {
+  getBackendUrl,
+  resetCustomServerUrl,
+  setCustomServerUrl,
+  syncFarmerProfileToServer,
+  syncPendingDiagnoses,
+  testServerConnection,
+} from '../../services/syncService';
 
 type PickerType = 'provinsi' | 'kabupaten' | null;
 
@@ -45,6 +53,61 @@ export default function ProfileScreen() {
   const [activePicker, setActivePicker] = useState<PickerType>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [saving, setSaving] = useState<boolean>(false);
+
+  // Server URL & Connection State
+  const [serverUrl, setServerUrl] = useState<string>(getBackendUrl());
+  const [showServerModal, setShowServerModal] = useState<boolean>(false);
+  const [inputServerUrl, setInputServerUrl] = useState<string>('');
+  const [testingConnection, setTestingConnection] = useState<boolean>(false);
+
+  const handleTestServer = async (targetUrl?: string) => {
+    setTestingConnection(true);
+    const active = targetUrl || serverUrl;
+    const res = await testServerConnection(active);
+    setTestingConnection(false);
+    if (res.success) {
+      const count = await syncPendingDiagnoses().catch(() => 0);
+      if (count > 0) {
+        Alert.alert('✅ Terhubung!', `Koneksi berhasil!\n${count} data riwayat tertunda berhasil otomatis disinkronkan ke website.`);
+      } else {
+        Alert.alert('✅ Terhubung!', 'Koneksi ke website monitoring aktif & siap menerima data diagnosa.');
+      }
+    } else {
+      Alert.alert('❌ Gagal Terhubung', `${res.message}\n\nPastikan URL server benar dan server di laptop aktif.`);
+    }
+  };
+
+  const handleSaveServerUrl = async () => {
+    if (!inputServerUrl.trim()) {
+      await resetCustomServerUrl();
+      const def = getBackendUrl();
+      setServerUrl(def);
+      setShowServerModal(false);
+      Alert.alert('Server Direset', 'URL server dikembalikan ke default:\n' + def);
+      return;
+    }
+    await setCustomServerUrl(inputServerUrl.trim());
+    const newUrl = getBackendUrl();
+    setServerUrl(newUrl);
+    setShowServerModal(false);
+    handleTestServer(newUrl);
+  };
+
+  const handleManualSync = async () => {
+    setTestingConnection(true);
+    try {
+      const count = await syncPendingDiagnoses();
+      if (count > 0) {
+        Alert.alert('🎉 Sinkronisasi Berhasil!', `${count} riwayat diagnosa berhasil dikirim ke website monitoring.`);
+      } else {
+        Alert.alert('Informasi', 'Seluruh riwayat diagnosa di HP sudah tersinkron ke website monitoring.');
+      }
+    } catch (err: any) {
+      Alert.alert('Gagal Sinkron', err.message || 'Server belum dapat dijangkau.');
+    } finally {
+      setTestingConnection(false);
+    }
+  };
 
   // Muat data profil saat halaman pertama dibuka
   useEffect(() => {
@@ -527,6 +590,67 @@ export default function ProfileScreen() {
             </View>
           )}
 
+          {/* ========================================================= */}
+          {/* SECTION SERVER WEBSITE MONITORING                         */}
+          {/* ========================================================= */}
+          <View style={[styles.sectionCard, { marginTop: 16 }]}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="cloud-upload-outline" size={20} color="#059669" style={{ marginRight: 8 }} />
+              <Text style={styles.sectionTitle}>Website Monitoring</Text>
+            </View>
+
+            <Text style={{ fontSize: 12, color: isDark ? '#9CA3AF' : '#6B7280', marginBottom: 10 }}>
+              Koneksi untuk sinkronisasi data riwayat diagnosa tanaman jagung ke website dashboard.
+            </Text>
+
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Alamat Server</Text>
+              <Text style={[styles.detailValue, { fontSize: 11, flex: 1, textAlign: 'right' }]} numberOfLines={2}>
+                {serverUrl}
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+              <TouchableOpacity
+                style={[styles.smallActionBtn, { backgroundColor: '#059669', flex: 1 }]}
+                onPress={() => handleTestServer()}
+                disabled={testingConnection}
+                activeOpacity={0.8}
+              >
+                {testingConnection ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="flash-outline" size={16} color="#fff" style={{ marginRight: 4 }} />
+                    <Text style={styles.smallActionBtnText}>Tes Koneksi</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.smallActionBtn, { backgroundColor: isDark ? '#374151' : '#E5E7EB', flex: 1 }]}
+                onPress={() => {
+                  setInputServerUrl(serverUrl);
+                  setShowServerModal(true);
+                }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="settings-outline" size={16} color={isDark ? '#F9FAFB' : '#1F2937'} style={{ marginRight: 4 }} />
+                <Text style={[styles.smallActionBtnText, { color: isDark ? '#F9FAFB' : '#1F2937' }]}>Ubah Server</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.syncNowBtn}
+              onPress={handleManualSync}
+              disabled={testingConnection}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="sync-outline" size={16} color="#059669" style={{ marginRight: 6 }} />
+              <Text style={styles.syncNowBtnText}>Sinkronkan Riwayat Sekarang</Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={{ height: 30 }} />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -595,6 +719,57 @@ export default function ProfileScreen() {
             }
           />
         </SafeAreaView>
+      </Modal>
+
+      {/* MODAL UBAH SERVER MONITORING */}
+      <Modal visible={showServerModal} animationType="fade" transparent={true}>
+        <View style={styles.serverModalOverlay}>
+          <View style={styles.serverModalContent}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Ionicons name="server-outline" size={24} color="#059669" style={{ marginRight: 8 }} />
+              <Text style={styles.serverModalTitle}>Pengaturan Server Monitoring</Text>
+            </View>
+
+            <Text style={styles.serverModalDesc}>
+              Masukkan alamat HTTPS Tunnel atau IP lokal backend dashboard monitoring:
+            </Text>
+
+            <TextInput
+              style={styles.serverModalInput}
+              value={inputServerUrl}
+              onChangeText={setInputServerUrl}
+              placeholder="https://... atau http://..."
+              placeholderTextColor="#9CA3AF"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
+              <TouchableOpacity
+                style={[styles.serverModalBtn, { backgroundColor: isDark ? '#374151' : '#E5E7EB' }]}
+                onPress={() => setShowServerModal(false)}
+              >
+                <Text style={[styles.serverModalBtnText, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>Batal</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.serverModalBtn, { backgroundColor: '#F59E0B' }]}
+                onPress={() => {
+                  setInputServerUrl('');
+                }}
+              >
+                <Text style={styles.serverModalBtnText}>Reset Default</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.serverModalBtn, { backgroundColor: '#059669', flex: 1.2 }]}
+                onPress={handleSaveServerUrl}
+              >
+                <Text style={styles.serverModalBtnText}>Simpan</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -950,5 +1125,81 @@ const getStyles = (isDark: boolean) =>
       color: '#9CA3AF',
       marginTop: 10,
       textAlign: 'center',
+    },
+    smallActionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+    },
+    smallActionBtnText: {
+      fontSize: 13,
+      fontWeight: 'bold',
+      color: '#FFFFFF',
+    },
+    syncNowBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 12,
+      paddingVertical: 11,
+      borderRadius: 10,
+      borderWidth: 1.5,
+      borderColor: '#059669',
+      backgroundColor: isDark ? 'rgba(5, 150, 105, 0.1)' : '#ECFDF5',
+    },
+    syncNowBtnText: {
+      color: '#059669',
+      fontSize: 13,
+      fontWeight: 'bold',
+    },
+    serverModalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    serverModalContent: {
+      width: '100%',
+      backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+      borderRadius: 16,
+      padding: 20,
+      elevation: 6,
+    },
+    serverModalTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: isDark ? '#F9FAFB' : '#111827',
+    },
+    serverModalDesc: {
+      fontSize: 12,
+      color: isDark ? '#9CA3AF' : '#6B7280',
+      marginBottom: 12,
+      lineHeight: 18,
+    },
+    serverModalInput: {
+      height: 46,
+      borderWidth: 1,
+      borderColor: isDark ? '#374151' : '#D1D5DB',
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      fontSize: 13,
+      color: isDark ? '#F9FAFB' : '#111827',
+      backgroundColor: isDark ? '#111827' : '#F9FAFB',
+    },
+    serverModalBtn: {
+      flex: 1,
+      paddingVertical: 11,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    serverModalBtnText: {
+      fontSize: 12,
+      fontWeight: 'bold',
+      color: '#FFFFFF',
     },
   });

@@ -239,7 +239,7 @@ export default function ExploreScreen() {
             <TouchableOpacity onPress={() => setShowAllGallery(false)} style={{padding: 5}}>
               <Ionicons name="arrow-back" size={26} color="#1F2937" />
             </TouchableOpacity>
-            <Text style={styles.fullGalleryTitle}>Semua Tanaman</Text>
+            <Text style={styles.fullGalleryTitle}>TANAMAN JAGUNG</Text>
             <View style={{width: 30}} />
           </View>
           <ScrollView contentContainerStyle={{padding: 20}}>
