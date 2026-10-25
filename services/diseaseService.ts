@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { DISEASE_DETAILS } from '../constants/diseaseData';
 import { EXPLORE_DETAILS } from '../constants/exploreData';
-import { getBackendUrl } from './syncService';
+import { getBackendUrl, resolveServerUrlFromRemote } from './syncService';
 
 export interface DiseaseInfoItem {
   id: string;
@@ -66,6 +66,7 @@ initDiseaseService().catch(() => {});
  * - Jika ada data baru yang berubah, langsung memicu re-render realtime di layar HP!
  */
 export async function syncDiseaseInfoFromServer(): Promise<boolean> {
+  await resolveServerUrlFromRemote().catch(() => {});
   const serverUrl = getBackendUrl();
   try {
     const response = await axios.get(`${serverUrl}/api/penyakit-info`, {

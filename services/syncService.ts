@@ -17,17 +17,17 @@ import { UserRegion } from './regionService';
  * =========================================================================
  * KONFIGURASI SERVER CLOUD / TUNNEL (UNTUK DIAKSES ORANG LAIN)
  * =========================================================================
- * Jika Anda menggunakan Cloud Tunnel (cth: 'npx localtunnel --port 5000') 
- * atau deploy backend ke Cloud Hosting (Render/Railway),
- * cukup masukkan URL tersebut di sini, misal:
- * export const CLOUD_SERVER_URL = 'https://milu-jagung.loca.lt';
- *
- * Jika dikosongkan (''), sistem otomatis menggunakan IP laptop developer (Wi-Fi).
+ * remote-config URL menunjuk ke file 'server-url.txt' di GitHub.
+ * Begitu URL server/tunnel/hosting berganti, cukup ubah satu baris di GitHub:
+ * seluruh HP petani di lapangan akan otomatis terhubung ke URL baru!
  */
-export let CLOUD_SERVER_URL: string = 'https://concerned-nextel-proper-weblog.trycloudflare.com';
+export const REMOTE_CONFIG_URL = 'https://raw.githubusercontent.com/ricald2004-rgb/ClientJagung/main/server-url.txt';
+
+export let CLOUD_SERVER_URL: string = 'https://laptops-gate-use-window.trycloudflare.com';
 
 const SERVER_URL_STORAGE_KEY = '@milu_sesehati_custom_server_url';
 let inMemoryServerUrl: string | null = null;
+let lastRemoteFetchTimestamp = 0;
 
 // Inisialisasi awal server URL dari storage jika ada
 AsyncStorage.getItem(SERVER_URL_STORAGE_KEY)
@@ -37,6 +37,48 @@ AsyncStorage.getItem(SERVER_URL_STORAGE_KEY)
     }
   })
   .catch(() => {});
+
+/**
+ * Mengambil URL server aktif secara dinamis dari GitHub ('Papan Pengumuman').
+ * Silent & resilient: Jika offline / gagal fetch, sistem memakai URL terakhir di cache atau fallback lokal.
+ */
+export async function resolveServerUrlFromRemote(force = false): Promise<string> {
+  const now = Date.now();
+  // Throttle: cegah spam request ke GitHub raw (maksimal sekali tiap 15 detik kecuali force)
+  if (!force && lastRemoteFetchTimestamp && now - lastRemoteFetchTimestamp < 15000) {
+    return getBackendUrl();
+  }
+
+  try {
+    // Cache buster timestamp agar raw GitHub selalu memberikan URL terbaru secara instan
+    const cacheBuster = `?t=${now}`;
+    const response = await axios.get(`${REMOTE_CONFIG_URL}${cacheBuster}`, {
+      timeout: 3500,
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      },
+    });
+
+    if (response.status === 200 && typeof response.data === 'string') {
+      const fetchedUrl = response.data.trim();
+      if (fetchedUrl.startsWith('http://') || fetchedUrl.startsWith('https://')) {
+        const cleanUrl = fetchedUrl.replace(/\/+$/, '');
+        lastRemoteFetchTimestamp = now;
+        if (cleanUrl !== inMemoryServerUrl) {
+          console.log(`🌐 [DYNAMIC RESOLVER] URL server baru diperbarui dari GitHub: ${cleanUrl}`);
+          inMemoryServerUrl = cleanUrl;
+          await AsyncStorage.setItem(SERVER_URL_STORAGE_KEY, cleanUrl);
+        }
+        return cleanUrl;
+      }
+    }
+  } catch (err: any) {
+    // Senyap: jika tidak ada internet, tetap gunakan cache atau fallback tanpa mengganggu user
+  }
+
+  return getBackendUrl();
+}
 
 export async function setCustomServerUrl(url: string): Promise<void> {
   const clean = url.trim().replace(/\/+$/, '');
@@ -185,6 +227,7 @@ export async function syncDiagnosisToServer(payload: SyncPayload): Promise<boole
     return false;
   }
 
+  await resolveServerUrlFromRemote().catch(() => {});
   const serverUrl = getBackendUrl();
 
   // 2. Kompres foto KHUSUS untuk upload
@@ -284,6 +327,7 @@ export async function syncFarmerProfileToServer(profile?: FarmerProfile | null):
     const p = profile || (await getFarmerProfile());
     if (!p || !p.nama) return false;
 
+    await resolveServerUrlFromRemote().catch(() => {});
     const serverUrl = getBackendUrl();
     const body = {
       nama_petani: p.nama.trim(),
@@ -324,6 +368,9 @@ export async function syncPendingDiagnoses(): Promise<number> {
   isSyncingInProgress = true;
 
   try {
+    // Perbarui URL server dari GitHub jika ada koneksi
+    await resolveServerUrlFromRemote().catch(() => {});
+
     const pendingItems = await getPendingSyncItems();
     if (pendingItems.length === 0) {
       return 0;
@@ -479,9 +526,16 @@ export function triggerAutoSyncWithRetry(onSynced?: (count: number) => void) {
  * Begitu HP online kembali, seluruh data otomatis terkirim tanpa tombol apa pun!
  */
 export function setupAutoSyncListener(onSynced?: (count: number) => void) {
+  // Cek update URL server saat listener pertama kali diinisialisasi
+  resolveServerUrlFromRemote().catch(() => {});
+
   return NetInfo.addEventListener((state) => {
     if (state.isConnected) {
-      triggerAutoSyncWithRetry(onSynced);
+      resolveServerUrlFromRemote(true)
+        .catch(() => {})
+        .finally(() => {
+          triggerAutoSyncWithRetry(onSynced);
+        });
     }
   });
 }
